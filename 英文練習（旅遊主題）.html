@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>English Practice – 7 Topics</title>
+<style>
+  body{font-family:Arial,"Noto Sans TC","Noto Sans CJK",sans-serif;background:#f9fafb;color:#111;margin:0}
+  header{background:#1d4ed8;color:#fff;padding:12px 16px}
+  h1{margin:0;font-size:20px}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px;background:#eef2ff}
+  label{font-size:14px}
+  select,input[type=range],input[type=text],button{font-size:14px}
+  input[type=text]{padding:6px 8px;min-width:160px}
+  button{cursor:pointer;border:1px solid #d1d5db;background:#fff;padding:6px 10px;border-radius:8px}
+  .primary{background:#111;color:#fff;border-color:#111}
+  .tabs{display:flex;gap:8px;padding:10px}
+  .tab-btn{border:1px solid #d1d5db;background:#fff;border-radius:999px;padding:6px 12px}
+  .tab-btn.active{background:#111;color:#fff;border-color:#111}
+  .hint{font-size:12px;color:#6b7280;padding:6px 10px}
+  table{width:100%;border-collapse:collapse;background:#fff;margin:10px 0}
+  th,td{border:1px solid #e5e7eb;padding:8px;vertical-align:top}
+  th{background:#f3f4f6}
+  .word-chip{display:inline-flex;gap:6px;align-items:center;border:1px solid #e5e7eb;background:#f8fafc;padding:4px 6px;margin:3px;border-radius:999px}
+  .word-voice{border:none;background:#e5e7eb;padding:2px 8px;border-radius:999px;cursor:pointer}
+  .speak-btn{background:#111;color:#fff;border-color:#111}
+  .muted{color:#6b7280;font-size:13px}
+  .wrap{padding:10px}
+</style>
+</head>
+<body>
+<header><h1>English Practice – 7 大主題</h1></header>
+
+<div class="bar">
+  <label>Topic:
+    <select id="topicSelect"></select>
+  </label>
+  <label>Voice:
+    <select id="voiceSelect"></select>
+  </label>
+  <label>Rate:
+    <input id="rateCtrl" type="range" min="0.6" max="1.4" step="0.05" value="1">
+  </label>
+  <label>Pitch:
+    <input id="pitchCtrl" type="range" min="0.6" max="1.4" step="0.05" value="1">
+  </label>
+  <input id="search" type="text" placeholder="🔍 Search in current tab...">
+  <button id="refreshVoicesBtn">🔄 重新載入語音</button>
+  <button id="testBtn" class="primary">🔊 測試語音</button>
+  <button id="stopBtn">■ 停止</button>
+</div>
+<div class="hint">語音清單會列出裝置支援的所有語音（含台灣國語、美式、英式、Google 男/女聲等）。若沒聲音：請先點「🔊 測試語音」，或按「🔄 重新載入語音」後改選其他語音。</div>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="common">常見問句</button>
+  <button class="tab-btn" data-tab="dialog">對話</button>
+  <button class="tab-btn" data-tab="words">必備單字</button>
+</div>
+
+<div class="wrap" id="content"></div>
+
+<script>
+/* ================= DATA（7 主題） ================= */
+const DATA = {
+  lodging: {
+    title: "住宿英文 (Hotel/Accommodation)",
+    common: [
+      { sentence:"I’d like to make a reservation for one night on the 3rd of June.",
+        zh:"我要預訂六月三號一晚的房間。",
+        tokens:[["I’d like to","我想要"],["make a reservation","預訂"],["for one night","一晚"],["on the 3rd of June","在六月三號"]] },
+      { sentence:"I’d like to reserve a single room.",
+        zh:"我想要預訂一間單人房。",
+        tokens:[["I’d like to","我想要"],["reserve","預訂"],["a single room","單人房"]] },
+      { sentence:"Could I book a double room for 3 days from (date) to (date)?",
+        zh:"我要訂一間雙人房從＿月＿日到＿月＿日。",
+        tokens:[["Could I","我可以"],["book","訂"],["a double room","雙人房"],["for 3 days","三天"],["from","從"],["to","到"]] },
+      { sentence:"Is breakfast included in the room price?",
+        zh:"請問房價有包含早餐嗎？",
+        tokens:[["Is","是否"],["breakfast","早餐"],["included","包含"],["in the room price","在房價內"]] },
+      { sentence:"Sorry, I didn’t make a reservation. Do you have any rooms available for tonight?",
+        zh:"不好意思我沒有先訂房，今晚還有空房嗎？",
+        tokens:[["Sorry","不好意思"],["I didn’t make a reservation","我沒有訂房"],["rooms available","有空房"],["for tonight","今晚"]] },
+      { sentence:"When is check-in time / check-out time?",
+        zh:"進房／退房的時間是什麼時候？",
+        tokens:[["check-in time","進房時間"],["check-out time","退房時間"]] },
+      { sentence:"Does the room have Internet access?",
+        zh:"房間裡有網路嗎？",
+        tokens:[["the room","房間"],["have","有"],["Internet access","網路連線"]] },
+      { sentence:"What time can I have breakfast?",
+        zh:"早餐幾點開始供應？",
+        tokens:[["What time","幾點"],["have breakfast","用早餐"]] },
+      { sentence:"Could you call a taxi for me?",
+        zh:"可以幫我叫計程車嗎？",
+        tokens:[["Could you","可以麻煩你"],["call a taxi","叫計程車"],["for me","幫我"]] },
+      { sentence:"I’d like to check out and finalize my bill.",
+        zh:"我要退房和結帳。",
+        tokens:[["check out","退房"],["finalize my bill","結清帳單"]] },
+    ],
+    dialog: [
+      { sentence:"Hello, I have a reservation under Chen.", zh:"你好，我以陳這個名字有訂房。", tokens:[["reservation","訂房"],["under","以…名義"]] },
+      { sentence:"May I see your passport, please?", zh:"可以看一下您的護照嗎？", tokens:[["May I","我可以"],["passport","護照"],["please","請"]] },
+      { sentence:"Here you are. Also, is breakfast included?", zh:"給你。另外，房價有包含早餐嗎？", tokens:[["Here you are","給你"],["is … included","有包含嗎"]] },
+      { sentence:"Yes, it is. Breakfast is served from 7 to 10 a.m.", zh:"有的。早餐供應時間是早上七點到十點。", tokens:[["is served","供應"],["from … to …","從…到…"]] },
+      { sentence:"Great, thank you.", zh:"太好了，謝謝。", tokens:[["Great","太好了"],["thank you","謝謝"]] },
+    ],
+    words: [
+      { sentence:"double room", zh:"雙人房（1張床）", tokens:[["double","雙人"],["room","房間"]] },
+      { sentence:"twin room", zh:"雙床房（2張單人床）", tokens:[["twin","雙床"],["room","房間"]] },
+      { sentence:"triple room", zh:"三人房", tokens:[["triple","三人"],["room","房間"]] },
+      { sentence:"family room", zh:"家庭房（四人）", tokens:[["family","家庭"],["room","房間"]] },
+      { sentence:"check-in / check-out", zh:"辦理入住／退房", tokens:[["check-in","入住"],["check-out","退房"]] },
+      { sentence:"reservation", zh:"預訂", tokens:[["reservation","預訂"]] },
+    ]
+  },
+
+  airport: {
+    title: "機場英文 (Airport)",
+    common: [
+      { sentence:"Would you like to book your seats now?", zh:"你要訂機位嗎?", tokens:[["Would you like to","你想要"],["book","預訂"],["seats","座位"],["now","現在"]] },
+      { sentence:"Would you like a window seat or an aisle seat?", zh:"您想要靠窗邊還是靠走道的位置?", tokens:[["window seat","靠窗座位"],["aisle seat","走道座位"]] },
+      { sentence:"What is your ticket number?", zh:"您的機票號碼是?", tokens:[["ticket number","機票號碼"]] },
+      { sentence:"What gate does the flight board at?", zh:"這班飛機要到哪一個登機門登機？", tokens:[["gate","登機門"],["board","登機"]] },
+      { sentence:"Excuse me, where is Gate __?", zh:"請問__號登機門在哪裡？", tokens:[["Excuse me","不好意思"],["Gate","登機門"]] },
+      { sentence:"When does the flight begin boarding?", zh:"這班飛機幾點登機？", tokens:[["begin boarding","開始登機"]] },
+      { sentence:"Excuse me, where is the transfer desk / lounge?", zh:"請問轉機櫃檯 / 休息室在哪裡？", tokens:[["transfer desk","轉機櫃檯"],["lounge","休息室"]] },
+    ],
+    dialog: [
+      { sentence:"I would like to confirm my flight.", zh:"我想確認我的班機。", tokens:[["confirm","確認"],["flight","航班"]] },
+      { sentence:"Can I get your ticket number?", zh:"請告訴我您的機票號碼。", tokens:[["ticket number","機票號碼"]] },
+      { sentence:"You are scheduled to depart on June 15th at 1:00 p.m. Is this correct?", zh:"您預定在6月15號下午一點起飛，對嗎？", tokens:[["scheduled to depart","預定起飛"]] },
+      { sentence:"Yes, it is.", zh:"是的。", tokens:[["Yes","是的"]] },
+      { sentence:"Your tickets have been confirmed. Please arrive 3 hours before departure.", zh:"已確認。請在起飛前三小時抵達。", tokens:[["confirmed","已確認"],["departure","起飛"]] },
+    ],
+    words: [
+      { sentence:"check-in", zh:"辦理登機", tokens:[["check","檢查"],["in","進入"]] },
+      { sentence:"delayed", zh:"延誤", tokens:[["delayed","延誤"]] },
+      { sentence:"boarding", zh:"登機", tokens:[["boarding","登機"]] },
+      { sentence:"gate", zh:"登機門", tokens:[["gate","登機門"]] },
+      { sentence:"departure time", zh:"起飛時間", tokens:[["departure","出發"],["time","時間"]] },
+      { sentence:"terminal", zh:"航廈", tokens:[["terminal","航廈"]] },
+    ]
+  },
+
+  transport: {
+    title: "交通英文 (Transportation)",
+    common: [
+      { sentence:"Could you tell me where I am now?", zh:"可以告訴我這是哪裡嗎?", tokens:[["where I am","我在哪裡"],["now","現在"]] },
+      { sentence:"Excuse me. How do I get to the railway station, please?", zh:"想請問如何到火車站？", tokens:[["How do I get to","怎麼去"],["railway station","火車站"]] },
+      { sentence:"Excuse me. Where’s the nearest restaurant, please?", zh:"最近的餐廳在哪裡？", tokens:[["nearest","最近的"],["restaurant","餐廳"]] },
+      { sentence:"Excuse me. I’m looking for the Number 8 bus stop.", zh:"想請問八號車站牌在哪裡?", tokens:[["looking for","正在找"],["bus stop","公車站"]] },
+      { sentence:"It’s easier if I can show you on the map.", zh:"你可以在地圖上指給我看嗎？", tokens:[["show you","給你看"],["on the map","在地圖上"]] },
+      { sentence:"How long does it take to go to ____?", zh:"到＿＿需要多長時間？", tokens:[["How long","多久"],["does it take","要花多久"]] },
+      { sentence:"Would it be better for me to take a taxi/bus?", zh:"搭計程車／公車會比較好嗎？", tokens:[["take a taxi/bus","搭計程車／公車"]] },
+      { sentence:"It’s about five minutes from here.", zh:"從這裡大約五分鐘。", tokens:[["about","大約"],["from here","從這裡"]] },
+      { sentence:"It’s about a ten-minute walk.", zh:"大約走十分鐘。", tokens:[["ten-minute walk","十分鐘路程"]] },
+      { sentence:"Where is the bus stop / taxi stand?", zh:"公車站／計程車招呼站在哪裡？", tokens:[["bus stop","公車站"],["taxi stand","計程車招呼站"]] },
+      { sentence:"How much does it cost to the train station by taxi?", zh:"乘計程車到車站需要多少錢？", tokens:[["How much","多少"],["cost","費用"]] },
+      { sentence:"Take me to this address, please.", zh:"請載我去這個地址。", tokens:[["Take me to","載我去"],["address","地址"]] },
+      { sentence:"Please stop right here.", zh:"請在這裡停車。", tokens:[["stop","停"],["right here","就在這裡"]] },
+      { sentence:"Can I pay the fare by credit card?", zh:"我可以用信用卡付車資嗎？", tokens:[["pay the fare","付車資"],["credit card","信用卡"]] },
+    ],
+    dialog: [
+      { sentence:"Excuse me. I’m looking for the post office.", zh:"不好意思，我在找郵局。", tokens:[["post office","郵局"]] },
+      { sentence:"Go straight, then turn left at the crossroads.", zh:"直走，然後在十字路口左轉。", tokens:[["go straight","直走"],["turn left","左轉"]] },
+      { sentence:"It’s about 100 meters on your left.", zh:"大約100公尺後在你的左手邊。", tokens:[["on your left","在你左邊"]] },
+      { sentence:"Thanks!", zh:"謝謝！", tokens:[["Thanks","謝謝"]] },
+      { sentence:"You’re welcome.", zh:"不客氣！", tokens:[["You’re welcome","不客氣"]] },
+    ],
+    words: [
+      { sentence:"go straight", zh:"直走", tokens:[["go","走"],["straight","直地"]] },
+      { sentence:"go past", zh:"通過", tokens:[["go","走"],["past","經過"]] },
+      { sentence:"cross", zh:"穿越", tokens:[["cross","穿越"]] },
+      { sentence:"direction", zh:"方向", tokens:[["direction","方向"]] },
+      { sentence:"keep going", zh:"一直往前", tokens:[["keep","保持"],["going","前進"]] },
+      { sentence:"landmark", zh:"地標", tokens:[["landmark","地標"]] },
+      { sentence:"on the right / left", zh:"在右／左邊", tokens:[["on the right","右邊"],["on the left","左邊"]] },
+      { sentence:"turn right / left", zh:"往右／左轉", tokens:[["turn","轉"],["right","右"],["left","左"]] },
+    ]
+  },
+
+  exchange: {
+    title: "換匯英文 (Exchange)",
+    common: [
+      { sentence:"What kind of currency do you want to change?", zh:"要換哪種貨幣？",
+        tokens:[["What kind of","哪一種"],["currency","貨幣"],["do you want to change","你要兌換"]] },
+      { sentence:"Please tell me what note you want.", zh:"請告訴我要什麼鈔票。",
+        tokens:[["note","紙鈔"],["you want","你要"]] },
+      { sentence:"Is it in traveler’s cheques?", zh:"換旅行支票嗎？",
+        tokens:[["traveler’s cheques","旅行支票"]] },
+      { sentence:"May I change this into Euro?", zh:"我可以把這些換成歐元嗎？",
+        tokens:[["change … into","換成"],["Euro","歐元"]] },
+      { sentence:"Could I cash my traveler’s checks here?", zh:"我可以在這裡換旅行支票嗎？",
+        tokens:[["cash","兌現"],["traveler’s checks","旅行支票"]] },
+      { sentence:"I’d like some small change, please. / May I have some coins for this bill?", zh:"我想把大鈔換成零錢可以嗎？",
+        tokens:[["small change","零錢"],["coins","硬幣"],["bill","紙鈔"]] },
+      { sentence:"Can you tell me what the exchange rate for the Euro is now?", zh:"可以告訴我現在歐元匯率是多少嗎？",
+        tokens:[["exchange rate","匯率"],["for the Euro","針對歐元"]] },
+      { sentence:"I’d like to break this fifty-dollar note.", zh:"我想把這張50美金紙幣換開。",
+        tokens:[["break a note","換開紙鈔"],["fifty-dollar note","50元紙鈔"]] },
+      { sentence:"Five twenties and ten singles, please.", zh:"請給我5張20元和10張一元。",
+        tokens:[["twenties","20元"],["singles","1元"]] },
+    ],
+    dialog: [
+      { sentence:"I would like to exchange some money.", zh:"我想換一些錢。", tokens:[["exchange","兌換"],["money","錢"]] },
+      { sentence:"What kind of currency do you want to change?", zh:"您要換哪一種貨幣？", tokens:[["currency","貨幣"]] },
+      { sentence:"I’d like to change US dollars into Euros.", zh:"我想把美金換成歐元。", tokens:[["US dollars","美金"],["Euros","歐元"]] },
+      { sentence:"How much would you like to exchange?", zh:"您要換多少金額？", tokens:[["How much","多少"],["exchange","兌換"]] },
+      { sentence:"Two hundred dollars, please.", zh:"我要換兩百元美金，謝謝。", tokens:[["Two hundred","兩百"],["dollars","美元"]] },
+      { sentence:"Do you want large bills or small notes?", zh:"您要大鈔還是小鈔？", tokens:[["large bills","大鈔"],["small notes","小鈔"]] },
+      { sentence:"Small notes, please.", zh:"請給我小鈔。", tokens:[["Small notes","小鈔"],["please","請"]] },
+      { sentence:"The exchange rate is 0.9. Here are your Euros.", zh:"匯率是0.9，這是您的歐元。", tokens:[["exchange rate","匯率"],["Here are","這是"]] },
+      { sentence:"Thank you very much.", zh:"非常感謝。", tokens:[["Thank you","謝謝"],["very much","非常"]] },
+    ],
+    words: [
+      { sentence:"cash", zh:"現金", tokens:[["cash","現金"]] },
+      { sentence:"currency", zh:"貨幣", tokens:[["currency","貨幣"]] },
+      { sentence:"exchange rate", zh:"匯率", tokens:[["exchange","兌換"],["rate","比率"]] },
+      { sentence:"traveler’s checks", zh:"旅行支票", tokens:[["traveler’s checks","旅行支票"]] },
+      { sentence:"coin", zh:"硬幣", tokens:[["coin","硬幣"]] },
+      { sentence:"change", zh:"零錢、找零", tokens:[["change","零錢 / 找零"]] },
+      { sentence:"note / bill", zh:"紙鈔", tokens:[["note","紙鈔（英式）"],["bill","紙鈔（美式）"]] },
+    ]
+  },
+
+  customs: {
+    title: "報關英文 (Customs)",
+    common: [
+      { sentence:"Do you have anything to declare?", zh:"你有任何需要申報的物品嗎？", tokens:[["anything to declare","需要申報的物品"]] },
+      { sentence:"Please open your bag for inspection.", zh:"請打開你的包包接受檢查。", tokens:[["open your bag","打開包包"],["inspection","檢查"]] },
+      { sentence:"Are you bringing any food or agricultural products?", zh:"你有帶食物或農產品嗎？", tokens:[["agricultural products","農產品"]] },
+      { sentence:"How much currency are you carrying?", zh:"你身上攜帶多少現金？", tokens:[["currency","現金／貨幣"],["carrying","攜帶"]] },
+      { sentence:"This line is for goods to declare.", zh:"這一列是申報通道。", tokens:[["goods to declare","需申報物品"]] },
+      { sentence:"Please fill out this form.", zh:"請填寫這份表格。", tokens:[["fill out","填寫"],["form","表格"]] },
+      { sentence:"Your luggage will be X-rayed.", zh:"你的行李將進行 X 光檢查。", tokens:[["luggage","行李"],["X-rayed","X 光檢查"]] },
+    ],
+    dialog: [
+      { sentence:"What’s the purpose of your visit?", zh:"你此行的目的為何？", tokens:[["purpose","目的"],["visit","訪問/旅遊"]] },
+      { sentence:"I’m here for tourism and will stay for seven days.", zh:"我來觀光，停留七天。", tokens:[["tourism","觀光"],["stay","停留"]] },
+      { sentence:"Do you have any goods to declare?", zh:"有需要申報的物品嗎？", tokens:[["goods to declare","需申報物品"]] },
+      { sentence:"No, I have nothing to declare.", zh:"沒有。", tokens:[["nothing to declare","無需申報"]] },
+      { sentence:"Please put your bags on the belt.", zh:"請把包包放上輸送帶。", tokens:[["belt","輸送帶"]] },
+      { sentence:"Here you are.", zh:"給你。", tokens:[["Here you are","給你"]] },
+    ],
+    words: [
+      { sentence:"declare", zh:"申報", tokens:[["declare","申報"]] },
+      { sentence:"customs", zh:"海關", tokens:[["customs","海關"]] },
+      { sentence:"duty-free", zh:"免稅的", tokens:[["duty-free","免稅"]] },
+      { sentence:"prohibited items", zh:"禁帶品", tokens:[["prohibited","禁止的"],["items","物品"]] },
+      { sentence:"inspection", zh:"檢查", tokens:[["inspection","檢查"]] },
+      { sentence:"immigration", zh:"入境", tokens:[["immigration","入境/移民"]] },
+    ]
+  },
+
+  dining: {
+    title: "用餐英文 (Dining)",
+    common: [
+      { sentence:"Do you have a table for ____ right now?", zh:"請問現在有 ___ 人座位嗎？",
+        tokens:[["table for ____","___ 人座位"],["right now","現在"]] },
+      { sentence:"I have a reservation at ___.", zh:"我今天 ___ 點有訂位。", tokens:[["reservation","訂位"],["at ___","在 ___ 點"]] },
+      { sentence:"May we have a table by the window, please?", zh:"可以給我們一個靠窗的桌子嗎？", tokens:[["table by the window","靠窗的桌子"]] },
+      { sentence:"Can I have a menu, please?", zh:"請給我菜單。", tokens:[["menu","菜單"]] },
+      { sentence:"Do you offer any set courses for a party of two?", zh:"有提供兩人套餐嗎？", tokens:[["set courses","套餐"],["party of two","兩人"]] },
+      { sentence:"What kind of dish is most popular here?", zh:"這裡最受歡迎的餐點是什麼？", tokens:[["popular","受歡迎的"],["dish","餐點"]] },
+      { sentence:"What would you recommend?", zh:"你推薦什麼？", tokens:[["recommend","推薦"]] },
+      { sentence:"We need more time to decide.", zh:"我們還需要一些時間決定。", tokens:[["need more time","需要更多時間"],["decide","決定"]] },
+      { sentence:"Excuse me, we’re ready to order.", zh:"不好意思，我們可以點餐了。", tokens:[["ready to order","準備好點餐"]] },
+      { sentence:"Can I get a ___?", zh:"我想點 ___。", tokens:[["Can I get","我可以要"],["a ___","一份 ___"]] },
+      { sentence:"May I have another spoon, please?", zh:"可以再給我一根湯匙嗎？", tokens:[["another spoon","另一支湯匙"]] },
+      { sentence:"We are ready for the bill now.", zh:"我們要買單。", tokens:[["bill","帳單"]] },
+      { sentence:"Can I get this to go?", zh:"這可以外帶嗎？", tokens:[["to go","外帶"]] },
+    ],
+    dialog: [
+      { sentence:"Do you have a table for two?", zh:"請問有兩人座嗎？", tokens:[["table for two","兩人座"]] },
+      { sentence:"Yes, please follow me.", zh:"有的，請跟我來。", tokens:[["follow me","跟我來"]] },
+      { sentence:"Could we sit by the window?", zh:"能坐靠窗嗎？", tokens:[["sit by the window","坐靠窗"]] },
+      { sentence:"Sure. Here are the menus.", zh:"可以。這是菜單。", tokens:[["menus","菜單"]] },
+      { sentence:"What do you recommend?", zh:"你推薦什麼？", tokens:[["recommend","推薦"]] },
+      { sentence:"Our specialty is the grilled salmon.", zh:"我們的招牌是烤鮭魚。", tokens:[["specialty","招牌菜"],["grilled salmon","烤鮭魚"]] },
+      { sentence:"Great. We’ll have one set menu and one salad.", zh:"好。我們要一份套餐和一份沙拉。", tokens:[["set menu","套餐"],["salad","沙拉"]] },
+      { sentence:"Anything to drink?", zh:"要喝點什麼嗎？", tokens:[["anything to","要不要"],["drink","喝的"]] },
+      { sentence:"Two iced teas, please.", zh:"兩杯冰紅茶，謝謝。", tokens:[["iced teas","冰紅茶"]] },
+      { sentence:"Here is your bill.", zh:"這是您的帳單。", tokens:[["bill","帳單"]] },
+      { sentence:"Can I pay by card?", zh:"可以刷卡嗎？", tokens:[["pay by card","用卡付款"]] },
+      { sentence:"Yes, we accept credit cards.", zh:"可以，我們接受信用卡。", tokens:[["accept credit cards","接受信用卡"]] },
+    ],
+    words: [
+      { sentence:"appetizer", zh:"開胃菜", tokens:[["appetizer","開胃菜"]] },
+      { sentence:"main course", zh:"主菜", tokens:[["main course","主菜"]] },
+      { sentence:"side dish", zh:"小菜／配菜", tokens:[["side","旁邊/配"],["dish","菜"]] },
+      { sentence:"specialty", zh:"招牌菜／特製", tokens:[["specialty","招牌/特製"]] },
+      { sentence:"dessert", zh:"甜點", tokens:[["dessert","甜點"]] },
+      { sentence:"beverage", zh:"飲料", tokens:[["beverage","飲料"]] },
+      { sentence:"vegetarian dishes", zh:"素食餐", tokens:[["vegetarian","素食"],["dishes","菜餚"]] },
+      { sentence:"to go", zh:"外帶", tokens:[["to go","外帶"]] },
+    ]
+  },
+
+  shopping: {
+    title: "購物英文 (Shopping)",
+    common: [
+      { sentence:"It’s a little pricey.", zh:"這有點貴耶。", tokens:[["a little","有點"],["pricey","昂貴的"]] },
+      { sentence:"Is there any discount on ___?", zh:"請問 ___ 現在有打折嗎？", tokens:[["discount","折扣"],["on ___","在 ___ 上"]] },
+      { sentence:"How about a discount?", zh:"打個折吧？", tokens:[["How about","要不要"],["discount","折扣"]] },
+      { sentence:"Still too expensive. Give me a better discount.", zh:"還是太貴了，再便宜一點吧！", tokens:[["expensive","貴的"],["better discount","更好的折扣"]] },
+      { sentence:"Can you cut me a deal?", zh:"可以算便宜一點嗎？", tokens:[["cut me a deal","算便宜"]] },
+      { sentence:"Is this your final price?", zh:"不能再便宜了嗎？", tokens:[["final price","最終價格"]] },
+      { sentence:"Do you have this in another color?", zh:"這個有別的顏色嗎？", tokens:[["another color","別的顏色"]] },
+      { sentence:"Can I get this in large?", zh:"這件可以給我大號的嗎？", tokens:[["in large","大號"],["this","這件"]] },
+      { sentence:"Can I have the next size up/down?", zh:"我可以試試大一號/小一號嗎？", tokens:[["next size up","大一號"],["down","小一號"]] },
+      { sentence:"Can I exchange it for another size?", zh:"我可以換別的尺寸嗎？", tokens:[["exchange","更換"],["size","尺寸"]] },
+      { sentence:"Do you have this in stock?", zh:"這個有新的嗎？", tokens:[["in stock","有庫存"]] },
+      { sentence:"Where is the checkout counter?", zh:"結帳櫃台在哪裡？", tokens:[["checkout counter","結帳櫃台"]] },
+      { sentence:"Can I pay by credit card?", zh:"可以用信用卡付帳嗎？", tokens:[["credit card","信用卡"]] },
+      { sentence:"Is this tax-free?", zh:"這免稅嗎？", tokens:[["tax-free","免稅"]] },
+      { sentence:"This is defective.", zh:"這件有瑕疵。", tokens:[["defective","有瑕疵的"]] },
+      { sentence:"Can I have a refund?", zh:"我可以退費嗎？", tokens:[["refund","退費"]] },
+    ],
+    dialog: [
+      { sentence:"How much is this sweater?", zh:"這件毛衣多少錢？", tokens:[["How much","多少"],["sweater","毛衣"]] },
+      { sentence:"It’s fifty dollars.", zh:"五十美元。", tokens:[["fifty dollars","50 美元"]] },
+      { sentence:"Is there any discount today?", zh:"今天有折扣嗎？", tokens:[["discount","折扣"],["today","今天"]] },
+      { sentence:"Yes, ten percent off.", zh:"有的，九折。", tokens:[["ten percent off","九折"]] },
+      { sentence:"Can I try this on?", zh:"可以試穿嗎？", tokens:[["try this on","試穿"]] },
+      { sentence:"The fitting room is over there.", zh:"試衣間在那邊。", tokens:[["fitting room","試衣間"],["over there","在那邊"]] },
+      { sentence:"I’ll take this one.", zh:"我要買這件。", tokens:[["take this","買這件"]] },
+      { sentence:"Would you like a receipt?", zh:"需要收據嗎？", tokens:[["receipt","收據"]] },
+      { sentence:"Yes, please. Can I pay by card?", zh:"需要，請問可以刷卡嗎？", tokens:[["pay by card","刷卡"]] },
+      { sentence:"Sure. Please insert your card.", zh:"可以，請插入卡片。", tokens:[["insert your card","插卡"]] },
+    ],
+    words: [
+      { sentence:"price tag", zh:"價格標籤", tokens:[["price","價格"],["tag","標籤"]] },
+      { sentence:"on sale", zh:"特價中", tokens:[["on sale","特價"]] },
+      { sentence:"receipt", zh:"收據", tokens:[["receipt","收據"]] },
+      { sentence:"refund / exchange", zh:"退費／換貨", tokens:[["refund","退費"],["exchange","換貨"]] },
+      { sentence:"size / color", zh:"尺寸／顏色", tokens:[["size","尺寸"],["color","顏色"]] },
+      { sentence:"fitting room", zh:"試衣間", tokens:[["fitting","試穿"],["room","房間"]] },
+    ]
+  },
+
+  help: {
+    title: "請求幫助英文 (Asking for Help)",
+    common: [
+      { sentence:"Sorry, I didn’t catch you.", zh:"對不起，我沒聽懂你說的。", tokens:[["didn’t catch","沒聽懂"]] },
+      { sentence:"I can’t hear you very well.", zh:"我聽不太清楚。", tokens:[["can’t hear well","聽不清楚"]] },
+      { sentence:"Pardon? / Excuse me?", zh:"不好意思，可以再說一遍嗎？", tokens:[["Pardon?","請再說一次"],["Excuse me?","不好意思？"]] },
+      { sentence:"Could you repeat that, please?", zh:"能請你再說一遍嗎？", tokens:[["repeat","重複"],["please","請"]] },
+      { sentence:"Would you say that again?", zh:"可以再說一次嗎？", tokens:[["say that again","再說一次"]] },
+      { sentence:"Could you speak up a little?", zh:"可以請你再大聲一點嗎？", tokens:[["speak up","大聲一點"]] },
+      { sentence:"Could you slow down a bit?", zh:"可以說慢一點嗎？", tokens:[["slow down","放慢"]] },
+      { sentence:"Could you write that down for me?", zh:"可以幫我寫下來嗎？", tokens:[["write down","寫下來"]] },
+      { sentence:"Can you show me on the map?", zh:"可以在地圖上指給我看嗎？", tokens:[["show me","指給我看"],["on the map","在地圖上"]] },
+      { sentence:"Excuse me, could you help me take a picture?", zh:"不好意思，可以幫我拍張照嗎？", tokens:[["take a picture","拍照"]] },
+      { sentence:"That’s a good one! Thank you!", zh:"這張拍得很好，謝謝！", tokens:[["good one","拍得好"]] },
+    ],
+    dialog: [
+      { sentence:"Sorry, I didn’t catch that. Could you say it again?", zh:"抱歉我沒聽清楚，可以再說一次嗎？", tokens:[["didn’t catch","沒聽懂"],["say it again","再說一次"]] },
+      { sentence:"Sure. Turn right at the next corner and you’ll see the station.", zh:"好，下一個路口右轉就會看到車站。", tokens:[["next corner","下一個路口"],["turn right","右轉"]] },
+      { sentence:"Could you speak a little slower?", zh:"可以再慢一點嗎？", tokens:[["speak slower","慢一點說"]] },
+      { sentence:"No problem. The museum opens at nine o’clock.", zh:"沒問題。博物館九點開。", tokens:[["opens at","在…開門"]] },
+      { sentence:"Can you help me take a picture?", zh:"可以幫我拍照嗎？", tokens:[["take a picture","拍照"]] },
+      { sentence:"Of course. Ready? Three, two, one.", zh:"當然可以。準備好了嗎？三、二、一。", tokens:[["Of course","當然"],["Ready","準備好了"]] },
+    ],
+    words: [
+      { sentence:"repeat", zh:"重複", tokens:[["repeat","重複"]] },
+      { sentence:"slowly / slower", zh:"慢慢地／更慢", tokens:[["slowly","慢慢地"],["slower","更慢"]] },
+      { sentence:"louder", zh:"大聲一點", tokens:[["louder","更大聲"]] },
+      { sentence:"help / assist", zh:"幫助／協助", tokens:[["help","幫助"],["assist","協助"]] },
+      { sentence:"point / show", zh:"指／示", tokens:[["point","指"],["show","示"]] },
+      { sentence:"write down / note", zh:"寫下／記下", tokens:[["write down","寫下"],["note","記下"]] },
+    ]
+  }
+};
+
+/* =============== UI: Topic options =============== */
+const topicSelect = document.getElementById("topicSelect");
+Object.entries(DATA).forEach(([key,val])=>{
+  const opt=document.createElement("option");
+  opt.value=key; opt.textContent=val.title;
+  topicSelect.appendChild(opt);
+});
+topicSelect.value="lodging";
+
+/* =============== TTS =============== */
+const synth = window.speechSynthesis;
+let VOICES = [];
+
+function maleScore(name=""){
+  const n = name.toLowerCase();
+  const keys = ["google uk english male","male","daniel","alex","fred","george","james","john","michael","david","tom","arthur"];
+  for(let i=0;i<keys.length;i++){ if(n.includes(keys[i])) return i; }
+  return 999;
+}
+function populateVoices(){
+  VOICES = synth.getVoices() || [];
+  const sel = document.getElementById("voiceSelect");
+  sel.innerHTML = "";
+  // 列出所有語音（不過濾語系，讓你可選台灣國語等）
+  VOICES.forEach((v,i)=>{
+    const opt=document.createElement("option");
+    opt.value=i;
+    opt.textContent=`${v.name} (${v.lang})`;
+    sel.appendChild(opt);
+  });
+  // 預設：偏向英文男聲 -> 其他英文 -> 第一個
+  let list = VOICES.slice().filter(v => (v.lang||"").toLowerCase().startsWith("en"));
+  list.sort((a,b)=>maleScore(a.name)-maleScore(b.name));
+  const preferred = list[0] || VOICES[0];
+  if(preferred){
+    sel.value = String(VOICES.indexOf(preferred));
+  }
+}
+function refreshVoices(){ populateVoices(); }
+
+populateVoices();
+if("onvoiceschanged" in speechSynthesis){
+  speechSynthesis.onvoiceschanged = populateVoices;
+}
+
+function resumeHack(){
+  try{
+    synth.resume();
+    const id=setInterval(()=>{synth.resume(); if(!synth.speaking && !synth.pending) clearInterval(id);},200);
+    setTimeout(()=>clearInterval(id),2000);
+  }catch(e){}
+}
+function speak(text,isWord=false){
+  if(!text) return;
+  if(synth.speaking || synth.pending) synth.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  const sel = document.getElementById("voiceSelect");
+  const rate = parseFloat(document.getElementById("rateCtrl").value)||1;
+  const pitch = parseFloat(document.getElementById("pitchCtrl").value)||1;
+  const v = VOICES[parseInt(sel.value,10)];
+  if(v){ u.voice=v; u.lang=v.lang||"en-US"; } else { u.lang="en-US"; }
+  u.rate = isWord ? rate*0.9 : rate;  // 單字微慢一點
+  u.pitch = pitch;
+  resumeHack();
+  synth.speak(u);
+}
+document.getElementById("testBtn").addEventListener("click",()=>speak("Hello! This is a test voice. 你好，我是測試語音。",false));
+document.getElementById("stopBtn").addEventListener("click",()=>{ try{synth.cancel();}catch(e){} });
+document.getElementById("refreshVoicesBtn").addEventListener("click",refreshVoices);
+
+/* =============== RENDER =============== */
+const content = document.getElementById("content");
+
+function renderTable(list, isWordSection=false){
+  const tbl=document.createElement("table");
+  tbl.innerHTML = `<thead>
+    <tr>
+      <th>${isWordSection?"English Word":"English Sentence"}</th>
+      <th>Words</th><th>中文</th><th>Action</th>
+    </tr></thead>`;
+  const tb=document.createElement("tbody");
+  list.forEach(item=>{
+    const tr=document.createElement("tr");
+
+    // English (sentence/word)
+    const tdEn=document.createElement("td");
+    tdEn.textContent=item.sentence;
+    tr.appendChild(tdEn);
+
+    // Tokens
+    const tdTok=document.createElement("td");
+    (item.tokens||[]).forEach(([en,zh])=>{
+      const chip=document.createElement("span"); chip.className="word-chip";
+      const b=document.createElement("button"); b.className="word-voice"; b.textContent="🔊"; b.addEventListener("click",()=>speak(en,true));
+      const enSpan=document.createElement("span"); enSpan.style.fontWeight="600"; enSpan.textContent=en;
+      const eq=document.createElement("span"); eq.className="muted"; eq.textContent=" = "+(zh||"");
+      chip.append(b,enSpan,eq);
+      tdTok.appendChild(chip);
+    });
+    tr.appendChild(tdTok);
+
+    // Chinese
+    const tdZh=document.createElement("td");
+    tdZh.textContent=item.zh||"";
+    tr.appendChild(tdZh);
+
+    // Action
+    const tdAct=document.createElement("td");
+    const btn=document.createElement("button");
+    btn.className="speak-btn";
+    btn.textContent="朗讀整句";
+    btn.addEventListener("click",()=>speak(item.sentence,false));
+    tdAct.appendChild(btn);
+    tr.appendChild(tdAct);
+
+    tb.appendChild(tr);
+  });
+  tbl.appendChild(tb);
+  return tbl;
+}
+
+function currentTopicKey(){ return topicSelect.value; }
+function currentTabKey(){ const a=document.querySelector(".tab-btn.active"); return a?a.dataset.tab:"common"; }
+
+function render(){
+  const topicKey = currentTopicKey();
+  const tabKey = currentTabKey();
+  const isWord = (tabKey==="words");
+  const list = DATA[topicKey][tabKey] || [];
+  content.innerHTML="";
+  content.appendChild(renderTable(list, isWord));
+}
+render();
+
+/* =============== EVENTS =============== */
+document.querySelectorAll(".tab-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    render();
+    document.getElementById("search").value=""; // 清空搜尋
+  });
+});
+topicSelect.addEventListener("change",()=>{
+  // 切主題時停播並回到常見問句
+  try{synth.cancel();}catch(e){}
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+  document.querySelector('.tab-btn[data-tab="common"]').classList.add("active");
+  document.getElementById("search").value="";
+  render();
+});
+
+/* 搜尋（目前分頁內篩選） */
+document.getElementById("search").addEventListener("input",(e)=>{
+  const q=(e.target.value||"").trim().toLowerCase();
+  const topicKey=currentTopicKey();
+  const tabKey=currentTabKey();
+  const src=DATA[topicKey][tabKey]||[];
+  const filtered = !q ? src : src.filter(it=>{
+    const inSentence = (it.sentence||"").toLowerCase().includes(q);
+    const inZh = (it.zh||"").toLowerCase().includes(q);
+    const inTokens = (it.tokens||[]).some(([en,zh])=>(en||"").toLowerCase().includes(q) || (zh||"").toLowerCase().includes(q));
+    return inSentence || inZh || inTokens;
+  });
+  content.innerHTML="";
+  content.appendChild(renderTable(filtered, tabKey==="words"));
+});
+</script>
+</body>
+</html>
